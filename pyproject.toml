@@ -7,6 +7,8 @@ license = "AGPL-3.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+click = "^8.1.8"
+evergreen-py = "^3.10.6"
 
 [tool.poetry.dev-dependencies]
 ruff = "^0.9.9"
