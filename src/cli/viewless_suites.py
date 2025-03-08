@@ -68,7 +68,7 @@ def setup_logging(verbose):
 @click.option('-v', '--verbose', 'verbose', is_flag=True, show_default=True, default=False, help='Enable debug logs.')
 @click.option(
         '--mdb-repo',
-        default=os.getenv('MDB_REPO', ''), show_default=True,
+        default=os.getenv('MDB_REPO', '.'), show_default=True,
         type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
         help='Path to mongoDB repository')
 def viewless_suites(verbose, mdb_repo):
