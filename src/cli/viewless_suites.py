@@ -124,5 +124,8 @@ def update_validated_tests(tests_results_path, force_override):
     update_validated_viewless_tests(succeeded_tests, force_override)
 
 
-if __name__ == "__main__":
+def main():
     viewless_suites()
+
+if __name__ == "__main__":
+    main()

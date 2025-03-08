@@ -103,6 +103,8 @@ def get_tests_results(patch_id, variant_name_regex, suite_name_regex, test_name_
         raise click.Abort()
     print(json.dumps(list(tests_results.values())))
 
+def main():
+    cli()
 
 if __name__ == "__main__":
-    cli()
+    main()
