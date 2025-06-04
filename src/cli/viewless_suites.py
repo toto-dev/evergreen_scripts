@@ -93,7 +93,7 @@ def enable_all_tests():
     Enable all tests in viewless suites
     """
     viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
-    replace_string_in_folder(viewless_suites_folder, 'only_validated_timeseries_tests_selector', 'all_timeseries_tests_selector')
+    replace_string_in_folder(viewless_suites_folder, 'only_validated_jscore_timeseries_tests_selector', 'all_jscore_timeseries_tests_selector')
 
 @viewless_suites.command()
 @click.option(
