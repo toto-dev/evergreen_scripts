@@ -18,6 +18,9 @@ VALIDATED_TESTS_SELECTOR_PREFIX = "only_validated_"
 TESTS_SELECTOR_SUFFIX = "_timeseries_tests_selector"
 SUITES_NAME_REGEX = r"(?!concurrency)(\S+)"
 
+VIEWLESS_SUITE_EXCLUSION_TAG = "does_not_support_viewless_timeseries_yet"
+IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG = f"IGNORE_{VIEWLESS_SUITE_EXCLUSION_TAG}"
+
 def update_validated_viewless_tests(new_roots, force_override=False):
 
     viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
@@ -84,25 +87,47 @@ def viewless_suites(verbose, mdb_repo):
     global MDB_REPO
     MDB_REPO = mdb_repo
 
-@viewless_suites.command()
-def only_validated_tests():
+def enable_all_tests_selector():
     """
-    Enable only validated tests
+    Enable all tests selector in viewless timeseries suites
+    """
+    viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
+    pattern = rf"{VALIDATED_TESTS_SELECTOR_PREFIX}{SUITES_NAME_REGEX}{TESTS_SELECTOR_SUFFIX}"
+    replacement = rf"{ALL_TESTS_SELECTOR_PREFIX}\1{TESTS_SELECTOR_SUFFIX}"
+    replace_string_in_folder(viewless_suites_folder, pattern, replacement)
+
+def enable_validated_tests_selector():
+    """
+    Enable validated tests selector in viewless timeseries suites
     """
     viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
     pattern = rf"{ALL_TESTS_SELECTOR_PREFIX}{SUITES_NAME_REGEX}{TESTS_SELECTOR_SUFFIX}"
     replacement = rf"{VALIDATED_TESTS_SELECTOR_PREFIX}\1{TESTS_SELECTOR_SUFFIX}"
     replace_string_in_folder(viewless_suites_folder, pattern, replacement)
 
+def set_viewless_suite_exclusion_tag(enable_exclusion_tag):
+    viewless_override_path = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
+    if enable_exclusion_tag:
+        replace_string_in_file(viewless_override_path, IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG, VIEWLESS_SUITE_EXCLUSION_TAG)
+    else:
+        replace_string_in_file(viewless_override_path, VIEWLESS_SUITE_EXCLUSION_TAG, IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG)
+
+
+@viewless_suites.command()
+def only_validated_tests():
+    """
+    Enable only validated tests
+    """
+    enable_validated_tests_selector()
+    set_viewless_suite_exclusion_tag(True)
+
 @viewless_suites.command()
 def enable_all_tests():
     """
     Enable all tests in viewless suites
     """
-    viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
-    pattern = rf"{VALIDATED_TESTS_SELECTOR_PREFIX}{SUITES_NAME_REGEX}{TESTS_SELECTOR_SUFFIX}"
-    replacement = rf"{ALL_TESTS_SELECTOR_PREFIX}\1{TESTS_SELECTOR_SUFFIX}"
-    replace_string_in_folder(viewless_suites_folder, pattern, replacement)
+    enable_all_tests_selector()
+    set_viewless_suite_exclusion_tag(False)
 
 @viewless_suites.command()
 @click.option(
