@@ -13,6 +13,11 @@ VIEWLESS_OVERRIDES_PATH = "buildscripts/resmokeconfig/matrix_suites/overrides/vi
 MAPPING_SUITES_FOLDER = "buildscripts/resmokeconfig/matrix_suites/mappings/"
 OVERRIDE_SECTION_NAME = 'only_validated_timeseries_tests_selector'
 
+ALL_TESTS_SELECTOR_PREFIX = "all_"
+VALIDATED_TESTS_SELECTOR_PREFIX = "only_validated_"
+TESTS_SELECTOR_SUFFIX = "_timeseries_tests_selector"
+SUITES_NAME_REGEX = r"(?!concurrency)(\S+)"
+
 def update_validated_viewless_tests(new_roots, force_override=False):
 
     viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
@@ -85,7 +90,9 @@ def only_validated_tests():
     Enable only validated tests
     """
     viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
-    replace_string_in_folder(viewless_suites_folder, 'all_timeseries_tests_selector', 'only_validated_timeseries_tests_selector')
+    pattern = rf"{ALL_TESTS_SELECTOR_PREFIX}{SUITES_NAME_REGEX}{TESTS_SELECTOR_SUFFIX}"
+    replacement = rf"{VALIDATED_TESTS_SELECTOR_PREFIX}\1{TESTS_SELECTOR_SUFFIX}"
+    replace_string_in_folder(viewless_suites_folder, pattern, replacement)
 
 @viewless_suites.command()
 def enable_all_tests():
@@ -93,7 +100,9 @@ def enable_all_tests():
     Enable all tests in viewless suites
     """
     viewless_suites_folder = os.path.join(MDB_REPO, MAPPING_SUITES_FOLDER)
-    replace_string_in_folder(viewless_suites_folder, 'only_validated_jscore_timeseries_tests_selector', 'all_jscore_timeseries_tests_selector')
+    pattern = rf"{VALIDATED_TESTS_SELECTOR_PREFIX}{SUITES_NAME_REGEX}{TESTS_SELECTOR_SUFFIX}"
+    replacement = rf"{ALL_TESTS_SELECTOR_PREFIX}\1{TESTS_SELECTOR_SUFFIX}"
+    replace_string_in_folder(viewless_suites_folder, pattern, replacement)
 
 @viewless_suites.command()
 @click.option(
