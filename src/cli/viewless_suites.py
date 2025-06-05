@@ -108,9 +108,9 @@ def enable_validated_tests_selector():
 def set_viewless_suite_exclusion_tag(enable_exclusion_tag):
     viewless_override_path = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
     if enable_exclusion_tag:
-        replace_string_in_file(viewless_override_path, IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG, VIEWLESS_SUITE_EXCLUSION_TAG)
+        replace_string_in_file(viewless_override_path, f"- {IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG}", f"- {VIEWLESS_SUITE_EXCLUSION_TAG}")
     else:
-        replace_string_in_file(viewless_override_path, VIEWLESS_SUITE_EXCLUSION_TAG, IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG)
+        replace_string_in_file(viewless_override_path, f"- {VIEWLESS_SUITE_EXCLUSION_TAG}", f"- {IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG}")
 
 
 @viewless_suites.command()
