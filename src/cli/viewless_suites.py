@@ -6,6 +6,10 @@ import re
 import os
 import json
 import yaml
+import sys
+
+from fnmatch import fnmatch
+from itertools import chain
 
 logger = logging.getLogger(__name__)
 MDB_REPO = None
@@ -21,6 +25,96 @@ SUITES_NAME_REGEX = r"(?!concurrency)(\S+)"
 
 VIEWLESS_SUITE_EXCLUSION_TAG = "does_not_support_viewless_timeseries_yet"
 IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG = f"IGNORE_{VIEWLESS_SUITE_EXCLUSION_TAG}"
+
+
+def load_viewless_overrides():
+    viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
+    with open(viewless_override_file, 'r') as file:
+        return yaml.safe_load(file)
+
+
+def write_viewless_overrides(content):
+    viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
+    with open(viewless_override_file, 'w') as file:
+        yaml.safe_dump(content, file, default_flow_style=False)
+
+
+def get_validated_tests_selectors_map():
+    # Get the map of all viewless suite overrides
+    override_map = {item['name']: item['value'] for item in load_viewless_overrides()}
+
+    selector_map = dict()
+    for override_name, override_value in override_map.items():
+        validated_match = re.match(rf"{VALIDATED_TESTS_SELECTOR_PREFIX}(\S+){TESTS_SELECTOR_SUFFIX}", override_name)
+        if not validated_match:
+            # This is not a validated tests selector
+            continue
+
+        selector_category_name = validated_match.group(1)
+
+        # find the corresponding all test selector for this suite
+        all_tests_selector_name = f"{ALL_TESTS_SELECTOR_PREFIX}{selector_category_name}{TESTS_SELECTOR_SUFFIX}"
+        all_tests_selector = override_map[all_tests_selector_name]
+        selector_map[selector_category_name] = {
+                'all_tests_roots': all_tests_selector['selector']['roots'],
+                'validated_tests': override_value['selector']['roots'],
+                'validated_tests_selector_name': override_name,
+                'all_tests_selector_name': all_tests_selector_name,
+                'num_validated_tests': len(override_value['selector']['roots'])
+                }
+    return selector_map
+
+
+def update_validated_tests_selectors(selector_map):
+    overrides = load_viewless_overrides()
+
+    for selector_cat, selector in selector_map.items():
+        selector_name = selector['validated_tests_selector_name']
+        for override in overrides:
+            if selector_name == override['name']:
+                if 'num_validated_tests_added' not in selector:
+                    logging.debug(f"Tests selector '{selector_name}' was not modified")
+                    continue
+                original_num_tests = selector['num_validated_tests']
+                final_num_tests = original_num_tests + selector['num_validated_tests_added']
+                logging.debug(f"Updating test selector '{selector_name}'. Number of tests increased from {original_num_tests} to {final_num_tests}")
+                selector['validated_tests'].sort()
+                override['value']['selector']['roots'] = selector['validated_tests']
+
+    write_viewless_overrides(overrides)
+
+
+def enable_tests_in_viewless_suites(tests):
+    selector_map = get_validated_tests_selectors_map()
+
+    for test in tests:
+        test_matched = False
+        for selector_cat, selector in selector_map.items():
+            matched_selector = False
+            for matcher in selector['all_tests_roots']:
+                if fnmatch(test, matcher):
+                    logging.debug(f"Found matching category '{selector_cat}' for test '{test}' with matcher '{matcher}'")
+                    matched_selector = True
+                    break
+            if not matched_selector:
+                continue
+
+            test_matched = True
+
+            if test in selector['validated_tests']:
+                # test already in validated tests
+                logging.debug(f"Test '{test}' already included in '{selector['all_tests_selector_name']}'")
+                continue
+
+            logging.info(f"Added test '{test}' to {selector['validated_tests_selector_name']}")
+            selector['validated_tests'].append(test)
+            selector['num_validated_tests_added'] = selector.get('num_validated_tests_added', 0) + 1
+
+        if not test_matched:
+            raise Exception(f"Could not find any selector matching test '{test}'")
+
+    update_validated_tests_selectors(selector_map)
+
 
 def update_validated_viewless_tests(new_roots, force_override=False):
 
@@ -52,6 +146,7 @@ def update_validated_viewless_tests(new_roots, force_override=False):
     # Write the updated data back to the YAML file
     with open(viewless_override_file, 'w') as file:
         yaml.safe_dump(overrides, file, default_flow_style=False)
+
 
 def replace_string_in_file(file_path, old_string, new_string):
     with open(file_path, 'r') as file:
@@ -106,8 +201,6 @@ def set_viewless_suite_exclusion_tag(enable_exclusion_tag):
         default=os.getenv('MDB_REPO', '.'), show_default=True,
         type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
         help='Path to mongoDB repository')
-
-
 def viewless_suites(verbose, mdb_repo):
     """
     helper utility to operate on viewless timseries suites
@@ -131,6 +224,35 @@ def enable_all_tests():
     """
     enable_all_tests_selector()
     set_viewless_suite_exclusion_tag(False)
+
+
+@viewless_suites.command()
+@click.argument(
+        'test_paths',
+        nargs=-1,
+        type=str)
+def add_tests(test_paths):
+    """
+    Enable the given list of tests in viewless timeseries suites.
+
+    Paths can be separated by spaces, newlines, or commas.
+    """
+
+    has_stdin_data = not sys.stdin.isatty()
+
+    if has_stdin_data and test_paths:
+        raise Exception('test paths have been passede both through command line parameter and standard input')
+
+    if not has_stdin_data and not test_paths:
+        raise Exception('No test paths provided. Neither through command line parameter nor standard input')
+
+    if has_stdin_data:
+        test_paths = [sys.stdin.read().strip()]
+
+    path_list = list(chain.from_iterable(re.split(r'[,\s\n]+', s) for s in test_paths))
+    logger.debug(f'Test paths: {path_list}')
+    enable_tests_in_viewless_suites(path_list)
+
 
 @viewless_suites.command()
 @click.option(
