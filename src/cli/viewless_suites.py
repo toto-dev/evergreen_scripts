@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 MDB_REPO = None
 VIEWLESS_OVERRIDES_PATH = "buildscripts/resmokeconfig/matrix_suites/overrides/viewless_timeseries.yml"
 MAPPING_SUITES_FOLDER = "buildscripts/resmokeconfig/matrix_suites/mappings/"
-OVERRIDE_SECTION_NAME = 'only_validated_timeseries_tests_selector'
+OVERRIDE_SECTION_NAME = 'only_validated_jscore_timeseries_tests_selector'
 
 ALL_TESTS_SELECTOR_PREFIX = "all_"
 VALIDATED_TESTS_SELECTOR_PREFIX = "only_validated_"
