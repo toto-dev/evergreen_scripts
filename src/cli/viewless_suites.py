@@ -9,8 +9,9 @@ import yaml
 
 logger = logging.getLogger(__name__)
 MDB_REPO = None
-VIEWLESS_OVERRIDES_PATH = "buildscripts/resmokeconfig/matrix_suites/overrides/viewless_timeseries.yml"
-MAPPING_SUITES_FOLDER = "buildscripts/resmokeconfig/matrix_suites/mappings/"
+MATRIX_SUITES_PATH = "buildscripts/resmokeconfig/matrix_suites"
+MAPPING_SUITES_FOLDER = f"{MATRIX_SUITES_PATH}/mappings/"
+VIEWLESS_OVERRIDES_PATH = f"{MATRIX_SUITES_PATH}/overrides/viewless_timeseries.yml"
 OVERRIDE_SECTION_NAME = 'only_validated_jscore_timeseries_tests_selector'
 
 ALL_TESTS_SELECTOR_PREFIX = "all_"
