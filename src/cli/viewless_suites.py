@@ -250,8 +250,10 @@ def add_tests(test_paths):
         test_paths = [sys.stdin.read().strip()]
 
     path_list = list(chain.from_iterable(re.split(r'[,\s\n]+', s) for s in test_paths))
-    logger.debug(f'Test paths: {path_list}')
-    enable_tests_in_viewless_suites(path_list)
+    normalized_path_list = list(map(os.path.normpath, path_list))
+
+    logger.debug(f'Test paths: {normalized_path_list}')
+    enable_tests_in_viewless_suites(normalized_path_list)
 
 
 @viewless_suites.command()
