@@ -72,21 +72,6 @@ def replace_string_in_folder(folder_path, old_string, new_string):
 def setup_logging(verbose):
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
 
-@click.group()
-@click.option('-v', '--verbose', 'verbose', is_flag=True, show_default=True, default=False, help='Enable debug logs.')
-@click.option(
-        '--mdb-repo',
-        default=os.getenv('MDB_REPO', '.'), show_default=True,
-        type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
-        help='Path to mongoDB repository')
-def viewless_suites(verbose, mdb_repo):
-    """
-    helper utility to operate on viewless timseries suites
-    """
-    setup_logging(verbose)
-    global MDB_REPO
-    MDB_REPO = mdb_repo
-
 def enable_all_tests_selector():
     """
     Enable all tests selector in viewless timeseries suites
@@ -112,6 +97,23 @@ def set_viewless_suite_exclusion_tag(enable_exclusion_tag):
     else:
         replace_string_in_file(viewless_override_path, f"- {VIEWLESS_SUITE_EXCLUSION_TAG}", f"- {IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG}")
 
+
+@click.group()
+@click.option('-v', '--verbose', 'verbose', is_flag=True, show_default=True, default=False, help='Enable debug logs.')
+@click.option(
+        '--mdb-repo',
+        default=os.getenv('MDB_REPO', '.'), show_default=True,
+        type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
+        help='Path to mongoDB repository')
+
+
+def viewless_suites(verbose, mdb_repo):
+    """
+    helper utility to operate on viewless timseries suites
+    """
+    setup_logging(verbose)
+    global MDB_REPO
+    MDB_REPO = mdb_repo
 
 @viewless_suites.command()
 def only_validated_tests():
