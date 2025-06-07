@@ -8,6 +8,7 @@ import json
 import yaml
 import sys
 
+from utils.tags import remove_tag_from_test
 from fnmatch import fnmatch
 from itertools import chain
 
@@ -84,7 +85,7 @@ def update_validated_tests_selectors(selector_map):
     write_viewless_overrides(overrides)
 
 
-def enable_tests_in_viewless_suites(tests):
+def enable_tests_in_viewless_suites(tests, strict=False):
     selector_map = get_validated_tests_selectors_map()
 
     for test in tests:
@@ -110,8 +111,12 @@ def enable_tests_in_viewless_suites(tests):
             selector['validated_tests'].append(test)
             selector['num_validated_tests_added'] = selector.get('num_validated_tests_added', 0) + 1
 
-        if not test_matched:
-            raise Exception(f"Could not find any selector matching test '{test}'")
+        had_exclusion_tag = remove_tag_from_test(test, VIEWLESS_SUITE_EXCLUSION_TAG)
+        if had_exclusion_tag:
+            logging.info(f"Removed exclusion tag from '{test}'")
+
+        if strict and not test_matched and not had_exclusion_tag:
+            raise Exception(f"Failed to add '{test}' to viewless suites. The test doesn't match any validated suite selector and does not contain viewless suite exclusion tag.")
 
     update_validated_tests_selectors(selector_map)
 
@@ -231,7 +236,10 @@ def enable_all_tests():
         'test_paths',
         nargs=-1,
         type=str)
-def add_tests(test_paths):
+@click.option('-s', '--strict', 'strict',
+              is_flag=True, show_default=True, default=False,
+              help='Fail if test is already included in test suites.')
+def add_tests(test_paths, strict):
     """
     Enable the given list of tests in viewless timeseries suites.
 
@@ -253,7 +261,7 @@ def add_tests(test_paths):
     normalized_path_list = list(map(os.path.normpath, path_list))
 
     logger.debug(f'Test paths: {normalized_path_list}')
-    enable_tests_in_viewless_suites(normalized_path_list)
+    enable_tests_in_viewless_suites(normalized_path_list, strict)
 
 
 @viewless_suites.command()
