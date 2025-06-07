@@ -122,7 +122,8 @@ def enable_tests_in_viewless_suites(tests, strict=False):
         if strict and not test_matched and not had_exclusion_tag:
             raise Exception(f"Failed to add '{test}' to viewless suites. The test doesn't match any validated suite selector and does not contain viewless suite exclusion tag.")
 
-    update_validated_tests_selectors(selector_map)
+    if any(selector.get('num_validated_tests_added', 0) for selector in selector_map.values()):
+        update_validated_tests_selectors(selector_map)
 
 
 def update_validated_viewless_tests(new_roots, force_override=False):
