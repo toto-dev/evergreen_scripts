@@ -4,7 +4,6 @@ import click
 import logging
 import re
 import os
-import json
 import yaml
 import sys
 
@@ -17,7 +16,6 @@ MDB_REPO = None
 MATRIX_SUITES_PATH = "buildscripts/resmokeconfig/matrix_suites"
 MAPPING_SUITES_FOLDER = f"{MATRIX_SUITES_PATH}/mappings/"
 VIEWLESS_OVERRIDES_PATH = f"{MATRIX_SUITES_PATH}/overrides/viewless_timeseries.yml"
-OVERRIDE_SECTION_NAME = 'only_validated_jscore_timeseries_tests_selector'
 
 ALL_TESTS_SELECTOR_PREFIX = "all_"
 VALIDATED_TESTS_SELECTOR_PREFIX = "only_validated_"
@@ -124,38 +122,6 @@ def enable_tests_in_viewless_suites(tests, strict=False):
 
     if any(selector.get('num_validated_tests_added', 0) for selector in selector_map.values()):
         update_validated_tests_selectors(selector_map)
-
-
-def update_validated_viewless_tests(new_roots, force_override=False):
-
-    viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
-    # Load the YAML file
-    with open(viewless_override_file, 'r') as file:
-        overrides = yaml.safe_load(file)
-
-    # Find and update the "only_validated_timeseries_tests_selector" section
-    for item in overrides:
-        if item.get('name') == OVERRIDE_SECTION_NAME:
-            # Update the roots list
-            old_roots = item['value']['selector']['roots']
-            logger.info(f"Number of validated tests before update {len(old_roots)}")
-            for old_root in old_roots:
-                if old_root not in new_roots:
-                    if not force_override:
-                        raise Exception(f"Detected removal of existing test '{old_root}'. Please use --force-override to proceed")
-                    else:
-                        logger.info(f"Removing existing test {old_root}")
-            logger.info(f"Number of validated tests after  update {len(new_roots)}")
-            new_roots.sort()
-            item['value']['selector']['roots'] = new_roots
-            break
-    else:
-        logger.error(f"Section '{OVERRIDE_SECTION_NAME}' not found.")
-        return
-
-    # Write the updated data back to the YAML file
-    with open(viewless_override_file, 'w') as file:
-        yaml.safe_dump(overrides, file, default_flow_style=False)
 
 
 def replace_string_in_file(file_path, old_string, new_string):
@@ -267,35 +233,6 @@ def add_tests(test_paths, strict):
 
     logger.debug(f'Test paths: {normalized_path_list}')
     enable_tests_in_viewless_suites(normalized_path_list, strict)
-
-
-@viewless_suites.command()
-@click.option(
-        '--tests-results',
-        'tests_results_path',
-        default=os.getenv('TESTS_RESULTS', ''), show_default=True,
-        type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True),
-        help='Path to the folder')
-@click.option('--force-override', is_flag=True, show_default=True, default=False, help='Force override of validated tests even if it will cause removal of existing tests.')
-def update_validated_tests(tests_results_path, force_override):
-    """
-    Enable all tests in viewless suites
-    """
-    with open(tests_results_path, 'r') as file:
-        tests_results = json.load(file)
-
-    succeeded_tests = []
-    for exec_stats in tests_results:
-        test_name = exec_stats['test_name']
-        if exec_stats['num_failed'] == 0:
-            succeeded_tests.append(test_name)
-            continue
-        logger.debug(f'Skipping failed test {test_name}')
-
-    for test_name in succeeded_tests:
-        logger.info(f'Test succeeded {test_name}')
-
-    update_validated_viewless_tests(succeeded_tests, force_override)
 
 
 def main():
