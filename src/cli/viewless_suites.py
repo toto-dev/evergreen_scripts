@@ -28,6 +28,10 @@ VIEWLESS_SUITE_EXCLUSION_TAG = "does_not_support_viewless_timeseries_yet"
 IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG = f"IGNORE_{VIEWLESS_SUITE_EXCLUSION_TAG}"
 
 
+def normalize_path(path):
+    return os.path.normpath(path.strip(' "'))
+
+
 def load_viewless_overrides():
     viewless_override_file = os.path.join(MDB_REPO, VIEWLESS_OVERRIDES_PATH)
     with open(viewless_override_file, 'r') as file:
@@ -258,7 +262,7 @@ def add_tests(test_paths, strict):
         test_paths = [sys.stdin.read().strip()]
 
     path_list = list(chain.from_iterable(re.split(r'[,\s\n]+', s) for s in test_paths))
-    normalized_path_list = list(map(os.path.normpath, path_list))
+    normalized_path_list = list(map(normalize_path, path_list))
 
     logger.debug(f'Test paths: {normalized_path_list}')
     enable_tests_in_viewless_suites(normalized_path_list, strict)
