@@ -228,6 +228,10 @@ def add_tests(test_paths, strict):
     if has_stdin_data:
         test_paths = [sys.stdin.read().strip()]
 
+    for test in test_paths:
+        if not test:
+            raise Exception(f"Unable to process empty test path '{test}'")
+
     path_list = list(chain.from_iterable(re.split(r'[,\s\n]+', s) for s in test_paths))
     normalized_path_list = list(map(normalize_path, path_list))
 
