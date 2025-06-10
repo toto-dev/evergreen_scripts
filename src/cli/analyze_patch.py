@@ -4,6 +4,7 @@ import click
 import logging
 import json
 import re
+from pathlib import PurePath
 
 from evergreen import RetryingEvergreenApi
 
@@ -42,7 +43,7 @@ def get_tests_from_patch(evg_api, patch_id,
             if not task.finish_time:
                 raise Exception(f"Encountered one matching suites that is still in progress {suite_name}")
             for test in task.get_tests():
-                test_name = test.test_file
+                test_name = test.test_file.replace('\\', '/')
                 if test_name_pattern and not test_name_pattern.match(test_name):
                     logger.debug(f"Skipping test  because name does not match {test_name}")
                     continue
