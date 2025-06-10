@@ -7,7 +7,7 @@ import os
 import yaml
 import sys
 
-from utils.tags import remove_tag_from_test
+from src.utils.tags import remove_tag_from_test
 from fnmatch import fnmatch
 from itertools import chain
 
