@@ -5,11 +5,10 @@ import logging
 import re
 import os
 import yaml
-import sys
 
 from src.utils.tags import remove_tags_from_test
+from src.utils.cli_args import normalize_paths_argument
 from fnmatch import fnmatch
-from itertools import chain
 
 logger = logging.getLogger(__name__)
 MDB_REPO = None
@@ -24,10 +23,6 @@ SUITES_NAME_REGEX = r"(?!concurrency)(\S+)"
 
 VIEWLESS_SUITE_EXCLUSION_TAG = "does_not_support_viewless_timeseries_yet"
 IGNORED_VIEWLESS_SUITE_EXCLUSION_TAG = f"IGNORE_{VIEWLESS_SUITE_EXCLUSION_TAG}"
-
-
-def normalize_path(path):
-    return os.path.normpath(path.strip(' "'))
 
 
 def load_viewless_overrides():
@@ -216,25 +211,7 @@ def add_tests(test_paths, strict):
 
     Paths can be separated by spaces, newlines, or commas.
     """
-
-    has_stdin_data = not sys.stdin.isatty()
-
-    if has_stdin_data and test_paths:
-        raise Exception('test paths have been passede both through command line parameter and standard input')
-
-    if not has_stdin_data and not test_paths:
-        raise Exception('No test paths provided. Neither through command line parameter nor standard input')
-
-    if has_stdin_data:
-        test_paths = [sys.stdin.read().strip()]
-
-    for test in test_paths:
-        if not test:
-            raise Exception(f"Unable to process empty test path '{test}'")
-
-    path_list = list(chain.from_iterable(re.split(r'[,\s\n]+', s) for s in test_paths))
-    normalized_path_list = list(map(normalize_path, path_list))
-
+    normalized_path_list = normalize_paths_argument(test_paths)
     logger.debug(f'Test paths: {normalized_path_list}')
     enable_tests_in_viewless_suites(normalized_path_list, strict)
 
