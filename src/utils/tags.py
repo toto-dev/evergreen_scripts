@@ -98,10 +98,8 @@ def replace_tags_body(file, new_tags: TestTags):
         with open(file, 'r') as f:
             content = f.read()
 
-        new_tags_serialized = new_tags.serialize()
-        def replace_fn(match):
-            return new_tags_serialized
-        new_content = re.sub(TAG_REGEX, replace_fn, content, flags=re.DOTALL|re.MULTILINE)
+        new_tags_serialized = new_tags.serialize() if new_tags.tags_dict else ""
+        new_content = re.sub(rf"{TAG_REGEX}\n?", new_tags_serialized, content, flags=re.DOTALL|re.MULTILINE)
 
         # 3. Write the modified content back
         with open(file, 'w') as f:
