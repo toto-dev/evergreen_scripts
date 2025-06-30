@@ -46,9 +46,14 @@ def extract_tags(tags_body):
         line = match.group(1)
         logger.debug(f"line: {line}")
 
-        match_comment = re.match(r"#\s+(.*)", line)
-        if match_comment:
-            comments.append(match_comment.group(1))
+        match_line_with_comment = re.match(r"(\s*\S+\s*,\s*)?#\s?(.*)", line)
+        if match_line_with_comment:
+            logger.debug(f'match_line_with_comment {match_line_with_comment.groups()}')
+            comments.append(match_line_with_comment.group(2))
+            if match_line_with_comment.group(1):
+                tag_name = match_line_with_comment.group(1).strip(', ')
+                yield Tag(tag_name, comments)
+                comments = []
             continue
 
         tags = line.split(',')
