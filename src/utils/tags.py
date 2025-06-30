@@ -6,17 +6,17 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 # Regex to find the block starting with '@tags: [' and ending with ']'
-COMMENT_REGEX = r"\s*(?:\*|\/)+\s*"
-TAG_HEADER_REGEX = r"@tags:\s*\[\s*"
-TAG_FOOTER_REGEX = r"\s*\]"
+SPACE = "[ \t]"
+COMMENT_REGEX = rf"{SPACE}*(?:\*|\/)+{SPACE}*"
+TAG_HEADER_REGEX = rf"@tags:{SPACE}*\[{SPACE}*\n+"
+TAG_FOOTER_REGEX = rf"{SPACE}*\]"
 TAG_REGEX = rf"^({COMMENT_REGEX}){TAG_HEADER_REGEX}(.*?){COMMENT_REGEX}{TAG_FOOTER_REGEX}$"
 
 
 class Tag:
-    def __init__(self, tag_name: str, comments: list):
+    def __init__(self, tag_name: str, comments: list = []):
         self.tag_name = tag_name
         self.comments = comments
-
 
 def extract_tags_section(file):
     try:
@@ -58,21 +58,32 @@ def extract_tags(tags_body):
         raise Exception(f"Failed to parse tags line: '{line}'")
 
 
+def extract_indent(tags_body, comment_prefix):
+    first_line = tags_body.splitlines()[0]
+    pattern = rf"^{re.escape(comment_prefix)}({SPACE}+).*$"
+    match = re.match(pattern, first_line)
+    if not match:
+        raise Exception(f"Failed to extract indent from tags line: '{first_line}'. Comment prefix: '{comment_prefix}'")
+    return len(match.group(1))
+
+
 class TestTags():
-    def __init__(self, tags: OrderedDict, comment_prefix: str):
+    def __init__(self, tags: OrderedDict, comment_prefix: str, indent: int = 2):
         self.tags_dict = tags
         self.comment_prefix = comment_prefix
+        self.indent = indent
 
     @staticmethod
     def from_file(file: str):
         tags_body, comment_prefix = extract_tags_section(file)
         if not tags_body:
             return None
+        indent = extract_indent(tags_body, comment_prefix)
         tags_dict = OrderedDict([(tag.tag_name, tag) for tag in extract_tags(tags_body)])
-        return TestTags(tags_dict, comment_prefix)
+        return TestTags(tags_dict, comment_prefix, indent)
 
-    def serialize(self, indent: int = 2):
-        prefix = " " * indent
+    def serialize(self):
+        prefix = " " * self.indent
         lines = ["@tags: ["]
         for tag in self.tags_dict.values():
             for comment in tag.comments:
