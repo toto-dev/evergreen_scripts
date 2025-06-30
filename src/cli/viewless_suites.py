@@ -7,7 +7,7 @@ import os
 import yaml
 import sys
 
-from src.utils.tags import remove_tag_from_test
+from src.utils.tags import remove_tags_from_test
 from fnmatch import fnmatch
 from itertools import chain
 
@@ -113,7 +113,7 @@ def enable_tests_in_viewless_suites(tests, strict=False):
             selector['validated_tests'].append(test)
             selector['num_validated_tests_added'] = selector.get('num_validated_tests_added', 0) + 1
 
-        had_exclusion_tag = remove_tag_from_test(test, VIEWLESS_SUITE_EXCLUSION_TAG)
+        had_exclusion_tag = remove_tags_from_test(test, [VIEWLESS_SUITE_EXCLUSION_TAG])
         if had_exclusion_tag:
             logging.info(f"Removed exclusion tag from '{test}'")
 

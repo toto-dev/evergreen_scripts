@@ -22,3 +22,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 analyze-patch = "src.cli.analyze_patch:main"
 viewless-suites = "src.cli.viewless_suites:main"
+tags = "src.cli.tags:main"
