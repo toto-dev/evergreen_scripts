@@ -59,7 +59,11 @@ def add(test_paths, tag_name, comment, replace):
     """
     normalized_path_list = normalize_paths_argument(test_paths)
     logger.debug(f'Test paths: {normalized_path_list}')
-    tag = Tag(tag_name, comment.replace("\\n", "\n").splitlines())
+    if comment:
+        normalized_comments = comment.replace("\\n", "\n").splitlines()
+    else:
+        normalized_comments = []
+    tag = Tag(tag_name, normalized_comments)
     for path in normalized_path_list:
         num_tags_modified = add_tags_to_test(path, [tag], replace)
         if num_tags_modified:
