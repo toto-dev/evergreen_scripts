@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 # Regex to find the block starting with '@tags: [' and ending with ']'
 SPACE = "[ \t]"
-COMMENT_REGEX = rf"{SPACE}*(?:\*|\/)+{SPACE}*"
-TAG_HEADER_REGEX = rf"@tags:{SPACE}*\[{SPACE}*\n+"
+COMMENT_REGEX = rf"{SPACE}*(?:\*|\/)*{SPACE}*"
+TAG_HEADER_REGEX = rf"@tags:{SPACE}*\[{SPACE}*"
 TAG_FOOTER_REGEX = rf"{SPACE}*\]"
 TAG_REGEX = rf"^({COMMENT_REGEX}){TAG_HEADER_REGEX}(.*?){COMMENT_REGEX}{TAG_FOOTER_REGEX}$"
 
@@ -38,14 +38,20 @@ def line_match_comment(line):
 
 
 def line_match_tag(line):
-    pattern = rf"^{COMMENT_REGEX}(?<!#)\b(\S+)\b,$"
+    pattern = rf"^{COMMENT_REGEX}(?<!#)\b(\S+)\b,*$"
     match = re.match(pattern, line)
     return match.group(1) if match else match
 
 
 def extract_tags(tags_body):
     comments = []
-    for line in tags_body.splitlines():
+    tags_lines = re.split(r"[\n,]", tags_body.strip('\n,'))
+    logger.debug(f"tags lines {tags_lines}")
+    for line in tags_lines:
+        if not line:
+            # skip empty line
+            continue
+        logger.debug(f"line: {line}")
         comment = line_match_comment(line)
         if comment:
             comments.append(comment.strip())
@@ -59,7 +65,11 @@ def extract_tags(tags_body):
 
 
 def extract_indent(tags_body, comment_prefix):
-    first_line = tags_body.splitlines()[0]
+    if not tags_body.startswith('\n'):
+        # this is a single line tag section
+        # so no indent to extract
+        return None
+    first_line = tags_body.strip('\n').splitlines()[0]
     pattern = rf"^{re.escape(comment_prefix)}({SPACE}+).*$"
     match = re.match(pattern, first_line)
     if not match:
@@ -71,7 +81,7 @@ class TestTags():
     def __init__(self, tags: OrderedDict, comment_prefix: str, indent: int = 2):
         self.tags_dict = tags
         self.comment_prefix = comment_prefix
-        self.indent = indent
+        self.indent = indent if indent is not None else 2
 
     @staticmethod
     def from_file(file: str):
