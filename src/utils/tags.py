@@ -70,8 +70,11 @@ def extract_indent(tags_body, comment_prefix):
         # this is a single line tag section
         # so no indent to extract
         return None
-    first_line = tags_body.strip('\n').splitlines()[0]
-    pattern = rf"^{re.escape(comment_prefix)}({SPACE}+).*$"
+    lines = tags_body.strip('\n').splitlines()
+    if not lines:
+        return None
+    first_line = lines[0]
+    pattern = rf"^{re.escape(comment_prefix)}({SPACE}*).*$"
     match = re.match(pattern, first_line)
     if not match:
         raise Exception(f"Failed to extract indent from tags line: '{first_line}'. Comment prefix: '{comment_prefix}'")
@@ -86,6 +89,7 @@ class TestTags():
 
     @staticmethod
     def from_file(file: str):
+        logger.debug(f'file: {file}')
         tags_body, comment_prefix = extract_tags_section(file)
         if not tags_body:
             return None
@@ -104,13 +108,55 @@ class TestTags():
         return f"{self.comment_prefix}" + f"\n{self.comment_prefix}".join(lines)
 
 
-def replace_tags_body(file, new_tags: TestTags):
+def find_header_comment_end(file_content):
+    in_comment = False
+    is_multiline = True
+    line_num = 0
+    for line in file_content.splitlines():
+        line_num += 1
+        if not line and not in_comment:
+            continue
+        if re.match(rf"^{SPACE}*(\*|\/)+{SPACE}*", line):
+            is_multiline  = not line.strip().startswith('//')
+            in_comment = True
+            continue
+        break
+    last_comment_line = line_num - 1
+    if is_multiline:
+        last_comment_line -= 1
+    if last_comment_line < 0:
+        last_comment_line = 0
+    return (last_comment_line, is_multiline)
+
+
+def add_tags_section(file_content: str, new_tags: TestTags):
+    line_num, multiline_comment = find_header_comment_end(file_content)
+    new_tags.comment_prefix = ' * ' if multiline_comment else '// '
+    logger.debug(line_num)
+    if not line_num:
+        serialized_tags = f"/*\n{new_tags.serialize()}\n */"
+    else:
+        serialized_tags = f"{new_tags.serialize()}\n"
+
+    file_content_lines = file_content.splitlines()
+    file_content_lines.insert(line_num, serialized_tags)
+    return "\n".join(file_content_lines)
+
+
+def write_tags_section(file, new_tags: TestTags):
     try:
         with open(file, 'r') as f:
             content = f.read()
 
-        new_tags_serialized = new_tags.serialize() if new_tags.tags_dict else ""
-        new_content = re.sub(rf"{TAG_REGEX}\n?", f"{new_tags_serialized}\n", content, flags=re.DOTALL|re.MULTILINE)
+        has_tags_section = re.search(TAG_REGEX, content, flags=re.DOTALL|re.MULTILINE)
+        if has_tags_section:
+            new_tags_serialized = new_tags.serialize() if new_tags.tags_dict else ""
+            new_content = re.sub(rf"{TAG_REGEX}\n?", f"{new_tags_serialized}\n", content, flags=re.DOTALL|re.MULTILINE)
+        else:
+            if not new_tags.tags_dict:
+                # tags list is empty and the file does not have any tags section yet
+                return
+            new_content = add_tags_section(content, new_tags)
 
         # 3. Write the modified content back
         with open(file, 'w') as f:
@@ -121,10 +167,10 @@ def replace_tags_body(file, new_tags: TestTags):
 
 def add_tags_to_test(test: str, tags_to_add: list, replace_existing: bool = False):
     tags = TestTags.from_file(test)
-    num_tag_modified = 0
     if not tags:
-        raise Exception(f"Could not find tags section in test '{test}'")
+        tags = TestTags(OrderedDict(), '')
 
+    num_tag_modified = 0
     for new_tag in tags_to_add:
         if new_tag in tags.tags_dict:
             if not replace_existing or new_tag == tags.tags_dict[new_tag.tag_name]:
@@ -133,7 +179,7 @@ def add_tags_to_test(test: str, tags_to_add: list, replace_existing: bool = Fals
         num_tag_modified += 1
 
     if num_tag_modified:
-        replace_tags_body(test, tags)
+        write_tags_section(test, tags)
     return num_tag_modified
 
 
@@ -155,5 +201,5 @@ def remove_tags_from_test(test: str, tags_to_remove: list, strict: bool = False)
             raise Exception(f"Cannot find tag '{tag}' in test '{test}'")
 
     if num_tags_removed:
-        replace_tags_body(test, tags)
+        write_tags_section(test, tags)
     return num_tags_removed
