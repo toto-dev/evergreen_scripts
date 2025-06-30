@@ -31,37 +31,33 @@ def extract_tags_section(file):
         raise Exception(f"Failed to extract tags body from file '{file}'") from ex
 
 
-def line_match_comment(line):
-    pattern = rf"^{COMMENT_REGEX}#(.*)$"
-    match = re.match(pattern, line)
-    return match.group(1) if match else match
-
-
-def line_match_tag(line):
-    pattern = rf"^{COMMENT_REGEX}(?<!#)\b(\S+)\b,*$"
-    match = re.match(pattern, line)
-    return match.group(1) if match else match
-
-
 def extract_tags(tags_body):
     comments = []
-    tags_lines = re.split(r"[\n,]", tags_body.strip('\n,'))
-    logger.debug(f"tags lines {tags_lines}")
-    for line in tags_lines:
-        if not line:
+    lines = tags_body.strip('\n,').splitlines()
+    logger.debug(f"tags lines {lines}")
+    for full_line in lines:
+        if not full_line:
             # skip empty line
             continue
+        logger.debug(f"full line: {full_line}")
+        match = re.match(rf"^{COMMENT_REGEX}(.*)[\s,]*$", full_line)
+        if not match:
+            raise Exception(f"Failed to remove comment header from tags line: '{full_line}'")
+        line = match.group(1)
         logger.debug(f"line: {line}")
-        comment = line_match_comment(line)
-        if comment:
-            comments.append(comment.strip())
+
+        match_comment = re.match(r"#\s+(.*)", line)
+        if match_comment:
+            comments.append(match_comment.group(1))
             continue
-        tag = line_match_tag(line)
-        if tag:
-            yield Tag(tag, comments)
+
+        tags = line.split(',')
+        for tag in tags:
+            if not tag:
+                # skip empty line
+                continue
+            yield Tag(tag.strip(), comments)
             comments = []
-            continue
-        raise Exception(f"Failed to parse tags line: '{line}'")
 
 
 def extract_indent(tags_body, comment_prefix):
