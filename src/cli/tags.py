@@ -74,7 +74,7 @@ def add(test_paths, tag_name, comment, replace):
     for path in normalized_path_list:
         num_tags_modified = add_tags_to_test(path, [tag], replace)
         if num_tags_modified:
-            logger.debug(f"Modified tags for test '{path}'")
+            logger.info(f"Modified tags for test '{path}'")
 
 @tags.command()
 @click.argument(
@@ -100,7 +100,7 @@ def remove(test_paths, tag_name, strict):
     for path in normalized_path_list:
         num_tags_removed = remove_tags_from_test(path, [tag_name], strict)
         if num_tags_removed:
-            logger.debug(f"Removed tag from test '{path}'")
+            logger.info(f"Removed tag from test '{path}'")
 
 def main():
     tags()

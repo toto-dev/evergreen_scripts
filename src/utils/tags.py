@@ -24,7 +24,7 @@ def extract_tags_section(file):
             content = f.read()
         tag_match = re.search(TAG_REGEX, content, re.DOTALL|re.MULTILINE)
         if tag_match:
-            logger.debug(f'Found matching tag section: {tag_match.groups()}')
+            logger.debug(f"Found matching tag section in '{file}': {tag_match.groups()}")
             return (tag_match.group(2), tag_match.group(1))
         return None, None
     except Exception as ex:
@@ -34,21 +34,17 @@ def extract_tags_section(file):
 def extract_tags(tags_body):
     comments = []
     lines = tags_body.strip('\n,').splitlines()
-    logger.debug(f"tags lines {lines}")
     for full_line in lines:
         if not full_line:
             # skip empty line
             continue
-        logger.debug(f"full line: {full_line}")
         match = re.match(rf"^{COMMENT_REGEX}(.*)[\s,]*$", full_line)
         if not match:
             raise Exception(f"Failed to remove comment header from tags line: '{full_line}'")
         line = match.group(1)
-        logger.debug(f"line: {line}")
 
         match_line_with_comment = re.match(r"(\s*\S+\s*,\s*)?#\s?(.*)", line)
         if match_line_with_comment:
-            logger.debug(f'match_line_with_comment {match_line_with_comment.groups()}')
             comments.append(match_line_with_comment.group(2))
             if match_line_with_comment.group(1):
                 tag_name = match_line_with_comment.group(1).strip(', ')
@@ -89,7 +85,6 @@ class TestTags():
 
     @staticmethod
     def from_file(file: str):
-        logger.debug(f'file: {file}')
         tags_body, comment_prefix = extract_tags_section(file)
         if not tags_body:
             return None
@@ -132,7 +127,6 @@ def find_header_comment_end(file_content):
 def add_tags_section(file_content: str, new_tags: TestTags):
     line_num, multiline_comment = find_header_comment_end(file_content)
     new_tags.comment_prefix = ' * ' if multiline_comment else '// '
-    logger.debug(line_num)
     if not line_num:
         serialized_tags = f"/*\n{new_tags.serialize()}\n */"
     else:
@@ -150,12 +144,18 @@ def write_tags_section(file, new_tags: TestTags):
 
         has_tags_section = re.search(TAG_REGEX, content, flags=re.DOTALL|re.MULTILINE)
         if has_tags_section:
-            new_tags_serialized = new_tags.serialize() if new_tags.tags_dict else ""
+            if not new_tags.tags_dict:
+                logger.debug(f"Removing tags section from '{file}'")
+                new_tags_serialized = ""
+            else:
+                logger.debug(f"Updating tags of '{file}'")
+                new_tags_serialized = new_tags.serialize() if new_tags.tags_dict else ""
             new_content = re.sub(rf"{TAG_REGEX}\n?", f"{new_tags_serialized}\n", content, flags=re.DOTALL|re.MULTILINE)
         else:
             if not new_tags.tags_dict:
                 # tags list is empty and the file does not have any tags section yet
                 return
+            logger.debug(f"Adding tags section to '{file}'")
             new_content = add_tags_section(content, new_tags)
 
         # 3. Write the modified content back
