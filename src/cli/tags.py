@@ -15,7 +15,19 @@ def setup_logging(verbose):
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
 
 
-@click.group()
+@click.group(
+        epilog="""
+Examples:
+
+  # Add 'requires_move_range' tag to all tests that use moveRange
+  git grep --name-only moveRange jstests/core/ | tags add --tag 'requires_move_range'
+
+  # Remove `does_not_support_stepdowns` tag from all core_sharding tests
+  git ls-files jstests/core_sharding | grep "\.js$" | tags remove --tag does_not_support_stepdowns
+
+  # Replace the comment associated with `does_not_support_stepdowns` tags in all tests
+  git grep --name-only does_not_support_stepdowns jstests/ | grep "\.js" | tags add --tag does_not_support_stepdowns --comment "Incompatible with stepdown suites"
+    """)
 @click.option('-v', '--verbose', 'verbose', is_flag=True, show_default=True, default=False, help='Enable debug logs.')
 @click.option(
         '--mdb-repo',
@@ -24,7 +36,7 @@ def setup_logging(verbose):
         help='Path to mongoDB repository')
 def tags(verbose, mdb_repo):
     """
-    helper utility to operate on viewless timseries suites
+    Manipulate test tags and their associated comments in MongoDB server test files.
     """
     setup_logging(verbose)
     global MDB_REPO
@@ -48,7 +60,7 @@ def tags(verbose, mdb_repo):
         help='Replace tag and its comment if it already exists')
 def add(test_paths, tag_name, comment, replace):
     """
-    Add or replace a tag in test files.
+    Add a new tag and an optional comment, or update the comment of an existing tag.
 
     Paths can be separated by spaces, newlines, or commas.
     """
@@ -76,10 +88,10 @@ def add(test_paths, tag_name, comment, replace):
 @click.option(
         '-s', '--strict',
         is_flag=True, show_default=True, default=False,
-        help='Throws an error if the file does not have the given tag')
+        help='Throws an error if a test does not have the given tag')
 def remove(test_paths, tag_name, strict):
     """
-    Remove tag from a test file.
+    Remove an existing tag.
 
     Paths can be separated by spaces, newlines, or commas.
     """
