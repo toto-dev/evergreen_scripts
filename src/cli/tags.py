@@ -22,11 +22,6 @@ def setup_logging(verbose):
         default=os.getenv('MDB_REPO', '.'), show_default=True,
         type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
         help='Path to mongoDB repository')
-@click.option(
-        '--mdb-repo',
-        default=os.getenv('MDB_REPO', '.'), show_default=True,
-        type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, readable=True),
-        help='Path to mongoDB repository')
 def tags(verbose, mdb_repo):
     """
     helper utility to operate on viewless timseries suites
